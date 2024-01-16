@@ -1,23 +1,22 @@
-const jwt = require("jsonwebtoken");
-const asyncHandler = require("./asyncHandler.middleware.js");
+const jwt = require('jsonwebtoken');
+const User = require('../models/user.model');
+const ErrorHandler = require('../utils/errorHandler');
+const asyncErrorHandler = require('./asyncErrorHandler');
 
-const isLoggedIn = asyncHandler(async (req, res, next) => {
-  const token = req.cookies.token;
+const isAuthenticatedUser = asyncErrorHandler(async (req, res, next) => {
+  const { token } = req.cookies;
 
   if (!token) {
-    return res
-      .status(401)
-      .json({ message: "Logged in first to do this operation" });
+    return next(new ErrorHandler('Please Login to Access', 401));
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.SECRET);
-    req.user = decoded;
+    const decodedData = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decodedData.id);
     next();
-  } catch (err) {
-    console.error(err);
-    return res.status(401).json({ message: "Unauthorized: Invalid token" });
+  } catch (error) {
+    return next(new ErrorHandler('Invalid Token', 401));
   }
 });
 
-module.exports = isLoggedIn;
+module.exports = { isAuthenticatedUser };
